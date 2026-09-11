@@ -1,0 +1,15 @@
+import crypto from 'node:crypto';
+import dotenv from 'dotenv';
+import { Pool } from 'pg';
+dotenv.config();
+const userId=process.env.ADMIN_USER_ID||'admin@tredin.in';
+const password=process.env.ADMIN_PASSWORD;
+if(!password||password.length<14) throw new Error('Set ADMIN_PASSWORD to a strong password (minimum 14 characters).');
+if(!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required.');
+const pool=new Pool({connectionString:process.env.DATABASE_URL});
+const salt=crypto.randomBytes(16).toString('hex');
+const hash=crypto.scryptSync(password,salt,64).toString('hex');
+const encoded='scrypt$'+salt+'$'+hash;
+await pool.query("insert into users(user_id,role,status,password_hash) values($1,'SUPER_ADMIN','ACTIVE',$2) on conflict(user_id) do update set role='SUPER_ADMIN',status='ACTIVE',password_hash=excluded.password_hash,updated_at=now()",[userId,encoded]);
+console.log('SUPER_ADMIN provisioned: '+userId);
+await pool.end();
