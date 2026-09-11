@@ -1,0 +1,73 @@
+services:
+  - type: web
+    name: tredin-user-live
+    runtime: static
+    plan: free
+    rootDir: USER
+    buildCommand: echo "TredIN USER ready"
+    staticPublishPath: .
+
+  - type: web
+    name: tredin-admin-live
+    runtime: static
+    plan: free
+    rootDir: ADMIN
+    buildCommand: echo "TredIN ADMIN ready"
+    staticPublishPath: .
+
+  - type: web
+    name: tredin-core-live
+    runtime: node
+    plan: free
+    rootDir: BACKEND/core-api
+    buildCommand: npm install --omit=dev
+    preDeployCommand: node src/init-db.js && node src/provision-admin.js
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tredin-postgres
+          property: connectionString
+      - key: MARKET_ADAPTER_URL
+        value: https://tredin-market-live.onrender.com
+      - key: CORS_ORIGIN
+        value: "*.onrender.com"
+      - key: JWT_ISSUER
+        value: tredin
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_USER_ID
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+  - type: web
+    name: tredin-market-live
+    runtime: node
+    plan: free
+    rootDir: BACKEND/market-adapter
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TREDIN_SYMBOL_MAP
+        sync: false
+      - key: TRUEDATA_WS_URL
+        value: wss://push.truedata.in:8086
+      - key: TRUEDATA_REALTIME_PORT
+        value: "8086"
+      - key: TRUEDATA_USER
+        sync: false
+      - key: TRUEDATA_PASSWORD
+        sync: false
+
+databases:
+  - name: tredin-postgres
+    plan: free
+    databaseName: tredin
+    user: tredin
