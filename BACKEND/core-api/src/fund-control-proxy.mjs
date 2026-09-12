@@ -73,9 +73,10 @@ http.createServer = function patchedCreateServer(requestListener, ...args) {
       const client=await pool.connect();
       try{
         await client.query('BEGIN');
+        await client.query("select pg_advisory_xact_lock(hashtext($1))",[reference]);
         const existing=await client.query('select id,user_id,entry_type,amount,reference_id,status,balance_after,created_at from ledger_entries where reference_id=$1 limit 1',[reference]);
         if(existing.rowCount){await client.query('ROLLBACK');return json(res,200,{ok:true,idempotent:true,ledger:existing.rows[0]},req);}
-        const target=await client.query('select id,user_id,status,full_name,mobile,email from users where id=$1 or user_id=$1 for update',[userId]);
+        const target=await client.query('select id,user_id,role,status,full_name,mobile,email from users where id=$1 or user_id=$1 for update',[userId]);
         if(!target.rowCount||target.rows[0].role!=='CUSTOMER'||target.rows[0].status!=='ACTIVE'){await client.query('ROLLBACK');return json(res,404,{ok:false,error:'ACTIVE_CUSTOMER_NOT_FOUND'},req);}
         const customer=target.rows[0];
         const bal=await client.query(`select coalesce(sum(case when status='POSTED' and entry_type in ('DEPOSIT','CREDIT','REALIZED_PNL') then amount when status='POSTED' and entry_type in ('WITHDRAWAL','DEBIT') then -amount else 0 end),0) balance from ledger_entries where user_id=$1`,[customer.id]);
