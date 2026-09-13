@@ -1,0 +1,17 @@
+{
+  "name": "tredin-master-platform",
+  "version": "4.8.15",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node services/api/server.mjs",
+    "start:market": "python3 services/market-data/truedata_service.py",
+    "check": "node --check services/api/server.mjs && node --check services/market-data/truedata.mjs && node --check services/execution/broker-adapter.mjs && python3 -m py_compile services/market-data/truedata_service.py"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "ws": "^8.18.3"
+  }
+}
